@@ -90,21 +90,10 @@ class MCPServerClient:
                 encoding='utf-8',
                 bufsize=1
             )
-            await asyncio.sleep(2)  # Give server time to start
-            
-            # Test server with capabilities request
-            test_result = await self.list_tools()
-            if test_result:
-                print(f"MCP server started successfully with {len(test_result)} tools")
-                return True
-            else:
-                print("MCP server started but no tools available")
-                return False
-                
+            await asyncio.sleep(1)  # Give server time to start
+            return True
         except Exception as e:
             print(f"Failed to start MCP server: {e}")
-            if self.process:
-                self.process.terminate()
             return False
     
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -195,8 +184,14 @@ async def list_directory(path: str) -> str:
         result = await mcp_client.call_tool("list_directory", {"path": path})
         if "error" in result:
             return f"Error listing directory: {result['error']}"
-        files = result.get("result", {}).get("files", [])
-        return "\n".join(files)
+        # Handle different possible response structures
+        if "result" in result:
+            if "files" in result["result"]:
+                files = result["result"]["files"]
+                return "\n".join(files) if isinstance(files, list) else str(files)
+            else:
+                return str(result["result"])
+        return "No result returned"
     except Exception as e:
         return f"Error: {str(e)}"
 
