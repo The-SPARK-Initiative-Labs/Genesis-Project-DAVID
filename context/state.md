@@ -13,6 +13,13 @@
 - **Solution**: Manual step pattern with `async with cl.Step()` instead of @cl.step decorator
 - **Result**: Thinking content shows cleanly in dropdown without Input/Output labels
 
+### ✅ TOOL RESEARCH COMPLETE (August 4, 2025)
+- **Problem**: Custom "david" model doesn't support tool calling (status code: 400)
+- **Root Cause**: Modelfiles strip tool calling metadata from base models
+- **Solution Found**: Use base qwen3-14b + runtime system prompts
+- **Next Step**: Implement fix (base model + system prompt approach)
+- **Research**: See tool_research_results.md for full details
+
 ### ❌ MISSING CORE FEATURES
 - ReAct framework implementation
 - Tool calling system
@@ -34,4 +41,4 @@ Need to display only the thinking content without Input/Output structure.
 - Different step configuration
 - Alternative UI pattern from Chainlit docs
 
-**Current State: UI foundation complete - ready for ReAct framework implementation**
+**Current State: Tool fix implemented - testing needed**
