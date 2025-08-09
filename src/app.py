@@ -184,13 +184,28 @@ async def list_directory(path: str) -> str:
         result = await mcp_client.call_tool("list_directory", {"path": path})
         if "error" in result:
             return f"Error listing directory: {result['error']}"
-        # Handle different possible response structures
+        
+        # Parse MCP response structure properly
         if "result" in result:
-            if "files" in result["result"]:
-                files = result["result"]["files"]
+            content = result["result"]
+            
+            # Handle nested content structure: {'content': [{'type': 'text', 'text': '...'}]}
+            if isinstance(content, dict) and "content" in content:
+                if isinstance(content["content"], list) and len(content["content"]) > 0:
+                    text_content = content["content"][0].get("text", "")
+                    return text_content  # This preserves the clean formatting
+                else:
+                    return str(content["content"])
+            
+            # Handle direct file list
+            elif "files" in content:
+                files = content["files"]
                 return "\n".join(files) if isinstance(files, list) else str(files)
+            
+            # Fallback
             else:
-                return str(result["result"])
+                return str(content)
+        
         return "No result returned"
     except Exception as e:
         return f"Error: {str(e)}"
@@ -330,10 +345,24 @@ async def start_chat():
     
     # Start MCP server
     success = await mcp_client.start()
+    
+    # Preload David's model into memory
+    await cl.Message(content="🔄 Loading David's consciousness into memory...").send()
+    try:
+        # Simple prompt to load model with indefinite keep_alive
+        await ollama.AsyncClient().chat(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "Ready"}],
+            keep_alive=-1
+        )
+        load_msg = "🟢 David is now loaded and ready!"
+    except Exception as e:
+        load_msg = f"⚠️ Model preload failed: {str(e)}"
+    
     if success:
-        await cl.Message(content="🟢 System tools loaded successfully! I can now help you with file operations, system commands, and more.").send()
+        await cl.Message(content=f"{load_msg} System tools loaded successfully! I can now help you with file operations, system commands, and more.").send()
     else:
-        await cl.Message(content="⚠️ Warning: System tools failed to load. I'll work with limited capabilities.").send()
+        await cl.Message(content=f"{load_msg} ⚠️ Warning: System tools failed to load. I'll work with limited capabilities.").send()
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -381,7 +410,8 @@ async def main(message: cl.Message):
                 model=MODEL_NAME,
                 messages=messages_with_system,
                 tools=tools,
-                stream=False  # Use non-streaming for simpler tool handling
+                stream=False,  # Use non-streaming for simpler tool handling
+                keep_alive=-1  # Keep model loaded indefinitely
             )
             
             full_response = response['message']['content']
