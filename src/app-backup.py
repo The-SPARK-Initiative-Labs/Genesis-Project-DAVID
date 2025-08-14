@@ -142,6 +142,7 @@ class ReActAgent:
     def __init__(self):
         self.max_iterations = 5
         self.conversation_history = []
+        self.last_tool_observation = ""
         
     async def process_with_react(self, query: str, messages: List[Dict]) -> str:
         """Process query using ReAct framework - let qwen3-14b do the reasoning"""
@@ -194,7 +195,9 @@ Begin:"""
             
             # Start conversation with ReAct prompt
             self.conversation_history = messages + [{"role": "user", "content": react_prompt}]
-            
+            # Reset last tool observation for this query
+            self.last_tool_observation = ""
+
             for iteration in range(self.max_iterations):
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
                     
@@ -213,6 +216,20 @@ Begin:"""
                     # Check for Final Answer
                     if "Final Answer:" in llm_response:
                         final_answer = llm_response.split("Final Answer:")[-1].strip()
+                        if self.last_tool_observation:
+                            obs_lower = self.last_tool_observation.lower()
+                            error_indicators = [
+                                "error",
+                                "no such file",
+                                "not found",
+                                "permission denied",
+                            ]
+                            if any(err in obs_lower for err in error_indicators):
+                                iter_step.output = "❌ Tool error encountered"
+                                main_step.output = f"❌ Error after {iteration + 1} iterations"
+                                return f"Error: {self.last_tool_observation}"
+                            if self.last_tool_observation not in final_answer:
+                                final_answer = f"{final_answer}\n\n{self.last_tool_observation}"
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
@@ -225,7 +242,9 @@ Begin:"""
                                 action_step.input = f"Tool: {tool_call['name']}"
                                 result = await execute_tool_call(tool_call['name'], tool_call['arguments'])
                                 action_step.output = result
-                                
+                                # Store most recent tool observation
+                                self.last_tool_observation = result
+
                                 # Add observation to conversation
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
                                 self.conversation_history.append({"role": "user", "content": f"Observation: {result}\n\nContinue reasoning:"})
