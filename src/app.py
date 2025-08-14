@@ -204,7 +204,9 @@ Begin reasoning."""
             
             # Start conversation with ReAct prompt
             self.conversation_history = messages + [{"role": "user", "content": react_prompt}]
-            
+            # Keep track of most recent tool output
+            last_tool_result = ""
+
             for iteration in range(self.max_iterations):
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
                     
@@ -226,6 +228,9 @@ Begin reasoning."""
                     # Check for Final Answer
                     if "Final Answer:" in llm_response:
                         final_answer = llm_response.split("Final Answer:")[-1].strip()
+                        # Append last tool result if not already included
+                        if last_tool_result and last_tool_result not in final_answer:
+                            final_answer = f"{final_answer}\n\n{last_tool_result}"
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
@@ -238,6 +243,8 @@ Begin reasoning."""
                                 action_step.input = f"Tool: {tool_call['name']}"
                                 result = await execute_tool_call(tool_call['name'], tool_call['arguments'])
                                 action_step.output = result
+                                # Store most recent tool result
+                                last_tool_result = result
                                 
                                 # Add observation to conversation
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
