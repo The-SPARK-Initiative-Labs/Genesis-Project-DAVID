@@ -178,19 +178,26 @@ class ReActAgent:
             main_step.input = f"Query: {query}"
             
             # Build ReAct prompt for qwen3-14b
-            react_prompt = f"""Think step by step to answer this question: {query}
+            react_prompt = (
+                f"""You are using the ReAct framework. Think step by step to answer this question: {query}
 
-Use this format:
+When you need to use a tool, respond using exactly this format:
 Thought: [your reasoning]
-Action: [tool to use] 
-Action Input: [tool arguments as JSON]
-Observation: [will be filled by tool result]
+<tool_call>
+{{
+  "name": "tool_name",
+  "arguments": {{"arg": "value"}}
+}}
+</tool_call>
 
-Continue this pattern until you can give a Final Answer.
+Do not write the Observation yourself. After a tool call, wait for an Observation message with the real result before continuing.
+When you have enough information to answer the question directly, respond with:
+Final Answer: [your answer]
 
 Available tools: read_file, write_file, list_directory, execute_command, system_info
 
-Begin:"""
+Begin reasoning."""
+            )
             
             # Start conversation with ReAct prompt
             self.conversation_history = messages + [{"role": "user", "content": react_prompt}]
