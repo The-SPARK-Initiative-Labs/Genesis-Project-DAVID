@@ -49,10 +49,15 @@ sys.modules['ollama'] = types.SimpleNamespace(AsyncClient=lambda: DummyAsyncClie
 
 from app import ReActAgent
 
-
 def test_simple_query_bypasses_react():
     agent = ReActAgent()
-    assert agent._needs_react_reasoning("What tools do you have available?") is False
+    assert agent._needs_react_reasoning("What tools do you have?") is False
+
+
+def test_long_simple_query_bypasses_react():
+    agent = ReActAgent()
+    query = "I am curious about the tools you have in this environment today"
+    assert agent._needs_react_reasoning(query) is False
 
 
 def test_complex_query_triggers_react():

@@ -167,12 +167,13 @@ class ReActAgent:
         
         # Only engage ReAct when query is long AND contains a complexity keyword
         word_count = len(query.split())
+        if word_count <= 6:
+            return False
 
         query_lower = query.lower()
         has_complexity = any(indicator in query_lower for indicator in complexity_indicators)
-        is_multi_step = word_count > 6
 
-        return has_complexity and is_multi_step
+        return has_complexity
     
     async def _execute_react_loop(self, query: str, messages: List[Dict]) -> str:
         """Execute ReAct reasoning loop - let qwen3-14b think and act"""
