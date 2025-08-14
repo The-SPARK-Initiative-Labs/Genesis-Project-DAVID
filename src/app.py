@@ -207,14 +207,17 @@ Begin reasoning."""
                     
                     # Get LLM response
                     async with cl.Step(name="🤔 Thinking", type="llm") as thought_step:
-                        response = await ollama.AsyncClient().chat(
+                        llm_response = ""
+                        async for chunk in await ollama.AsyncClient().chat(
                             model=MODEL_NAME,
                             messages=self.conversation_history,
-                            stream=False,
+                            stream=True,
                             options={**QWEN3_PARAMS, "keep_alive": -1}
-                        )
-                        
-                        llm_response = response['message']['content']
+                        ):
+                            token = chunk.get('message', {}).get('content', '')
+                            llm_response += token
+                            await thought_step.stream_token(token)
+
                         thought_step.output = llm_response
                     
                     # Check for Final Answer
@@ -251,17 +254,23 @@ Begin reasoning."""
     
     async def _simple_response(self, query: str, messages: List[Dict]) -> str:
         """Handle simple queries without ReAct reasoning"""
-        
+
         try:
-            response = await ollama.AsyncClient().chat(
-                model=MODEL_NAME,
-                messages=messages + [{"role": "user", "content": query}],
-                stream=False,
-                options={**QWEN3_PARAMS, "keep_alive": -1}
-            )
-            
-            return response['message']['content']
-            
+            async with cl.Step(name="💬 Response", type="llm") as answer_step:
+                llm_response = ""
+                async for chunk in await ollama.AsyncClient().chat(
+                    model=MODEL_NAME,
+                    messages=messages + [{"role": "user", "content": query}],
+                    stream=True,
+                    options={**QWEN3_PARAMS, "keep_alive": -1}
+                ):
+                    token = chunk.get('message', {}).get('content', '')
+                    llm_response += token
+                    await answer_step.stream_token(token)
+
+                answer_step.output = llm_response
+                return llm_response
+
         except Exception as e:
             return f"Sorry, I encountered an error: {str(e)}"
 
