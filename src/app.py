@@ -253,7 +253,13 @@ Begin reasoning."""
 
                                 # Add observation to conversation
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
-                                self.conversation_history.append({"role": "user", "content": f"Observation: {result}\n\nContinue reasoning:"})
+                                # Store tool output as internal context for the next cycle
+                                self.conversation_history.append(
+                                    {
+                                        "role": "system",
+                                        "content": f"Observation: {result}\n\nContinue reasoning:",
+                                    }
+                                )
                                 break
                     else:
                         # No tool call present. If the model responded directly (no "Thought:" prefix),
@@ -268,7 +274,10 @@ Begin reasoning."""
 
                         # Otherwise, continue reasoning cycle
                         self.conversation_history.append({"role": "assistant", "content": llm_response})
-                        self.conversation_history.append({"role": "user", "content": "Continue with your reasoning:"})
+                        # Prompt model to continue reasoning using a system message
+                        self.conversation_history.append(
+                            {"role": "system", "content": "Continue with your reasoning:"}
+                        )
                     
                     iter_step.output = f"Iteration {iteration + 1} completed"
             
