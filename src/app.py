@@ -218,12 +218,13 @@ Begin reasoning."""
                     # Stream response tokens
                     async with cl.Step(name="🤔 Thinking", type="llm") as thought_step:
                         llm_response = ""
-                        async for chunk in await ollama.AsyncClient().chat(
+                        stream = await ollama.AsyncClient().chat(
                             model=MODEL_NAME,
                             messages=self.conversation_history,
                             stream=True,
                             options={**QWEN3_PARAMS, "keep_alive": -1}
-                        ):
+                        )
+                        async for chunk in stream:
                             token = chunk.get('message', {}).get('content', '')
                             if token:
                                 await thought_step.stream_token(token)
@@ -285,12 +286,13 @@ Begin reasoning."""
             # Stream response tokens
             async with cl.Step(name="💬 Response", type="llm") as answer_step:
                 llm_response = ""
-                async for chunk in await ollama.AsyncClient().chat(
+                stream = await ollama.AsyncClient().chat(
                     model=MODEL_NAME,
                     messages=messages + [{"role": "user", "content": query}],
                     stream=True,
                     options={**QWEN3_PARAMS, "keep_alive": -1}
-                ):
+                )
+                async for chunk in stream:
                     token = chunk.get('message', {}).get('content', '')
                     if token:
                         await answer_step.stream_token(token)
