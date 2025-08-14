@@ -233,14 +233,21 @@ Begin:"""
                                 result = await execute_tool_call(tool_call['name'], tool_call['arguments'])
                                 action_step.output = result
                                 
-                                # Add observation to conversation
+                                # Add observation to conversation as internal context
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
-                                self.conversation_history.append({"role": "user", "content": f"Observation: {result}\n\nContinue reasoning:"})
+                                self.conversation_history.append(
+                                    {
+                                        "role": "system",
+                                        "content": f"Observation: {result}\n\nContinue reasoning:",
+                                    }
+                                )
                                 break
                     else:
                         # No tool call, continue reasoning
                         self.conversation_history.append({"role": "assistant", "content": llm_response})
-                        self.conversation_history.append({"role": "user", "content": "Continue with your reasoning:"})
+                        self.conversation_history.append(
+                            {"role": "system", "content": "Continue with your reasoning:"}
+                        )
                     
                     iter_step.output = f"Iteration {iteration + 1} completed"
             
