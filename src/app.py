@@ -196,6 +196,9 @@ Final Answer: [your answer]
 
 Available tools: read_file, write_file, list_directory, execute_command, system_info
 
+Keep reasoning concise, avoid repeating prior thoughts.
+Final Answer must include all requested information without referring to earlier reasoning.
+
 Begin reasoning."""
             )
             
