@@ -214,6 +214,7 @@ Begin reasoning."""
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
                     
                     # Get LLM response
+                    # Stream response tokens
                     async with cl.Step(name="🤔 Thinking", type="llm") as thought_step:
                         llm_response = ""
                         async for chunk in await ollama.AsyncClient().chat(
@@ -223,8 +224,9 @@ Begin reasoning."""
                             options={**QWEN3_PARAMS, "keep_alive": -1}
                         ):
                             token = chunk.get('message', {}).get('content', '')
-                            llm_response += token
-                            await thought_step.stream_token(token)
+                            if token:
+                                await thought_step.stream_token(token)
+                                llm_response += token
 
                         thought_step.output = llm_response
                     
@@ -279,6 +281,7 @@ Begin reasoning."""
         """Handle simple queries without ReAct reasoning"""
 
         try:
+            # Stream response tokens
             async with cl.Step(name="💬 Response", type="llm") as answer_step:
                 llm_response = ""
                 async for chunk in await ollama.AsyncClient().chat(
@@ -288,8 +291,9 @@ Begin reasoning."""
                     options={**QWEN3_PARAMS, "keep_alive": -1}
                 ):
                     token = chunk.get('message', {}).get('content', '')
-                    llm_response += token
-                    await answer_step.stream_token(token)
+                    if token:
+                        await answer_step.stream_token(token)
+                        llm_response += token
 
                 answer_step.output = llm_response
                 return llm_response
