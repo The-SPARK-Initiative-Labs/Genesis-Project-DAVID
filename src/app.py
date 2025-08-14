@@ -239,7 +239,20 @@ Begin reasoning."""
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
-                    
+
+                    # Reject responses that fabricate observations
+                    if re.search(r'Observation:', llm_response, re.IGNORECASE):
+                        self.conversation_history.append({"role": "assistant", "content": llm_response})
+                        self.conversation_history.append({
+                            "role": "user",
+                            "content": (
+                                "Do not write Observations yourself. "
+                                "Provide a tool call and wait for the actual Observation."
+                            ),
+                        })
+                        iter_step.output = "Invalid self observation"
+                        continue
+
                     # Parse and execute tool calls
                     tool_calls = parse_hermes_tool_calls(llm_response)
                     if tool_calls:
@@ -253,9 +266,25 @@ Begin reasoning."""
 
                                 # Add observation to conversation
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
-                                self.conversation_history.append({"role": "user", "content": f"Observation: {result}\n\nContinue reasoning:"})
+                                self.conversation_history.append({
+                                    "role": "user",
+                                    "content": f"Observation: {result}\n\nContinue reasoning:",
+                                })
                                 break
                     else:
+                        # Detect attempts at tool usage without proper formatting
+                        if re.search(r'Action:|Action Input:', llm_response, re.IGNORECASE):
+                            self.conversation_history.append({"role": "assistant", "content": llm_response})
+                            self.conversation_history.append({
+                                "role": "user",
+                                "content": (
+                                    "Tool call not recognized. Use <tool_call> tags with JSON arguments "
+                                    "and do not include an Observation."
+                                ),
+                            })
+                            iter_step.output = "Invalid tool call format"
+                            continue
+
                         # No tool call present. If the model responded directly (no "Thought:" prefix),
                         # treat the response as the final answer and exit.
                         if not llm_response.strip().lower().startswith("thought:"):
@@ -826,11 +855,11 @@ async def execute_tool_call(tool_name: str, tool_args: dict) -> str:
 def parse_hermes_tool_calls(response_text: str) -> List[Dict[str, Any]]:
     """Parse Hermes-style XML tool calls from response"""
     tool_calls = []
-    
+
     # Find all tool_call XML blocks
     pattern = r'<tool_call>\s*(\{.*?\})\s*</tool_call>'
     matches = re.findall(pattern, response_text, re.DOTALL)
-    
+
     for match in matches:
         try:
             tool_call_data = json.loads(match.strip())
@@ -841,7 +870,20 @@ def parse_hermes_tool_calls(response_text: str) -> List[Dict[str, Any]]:
         except json.JSONDecodeError as e:
             print(f"Failed to parse tool call JSON: {match} - Error: {e}")
             continue
-    
+
+    # Fallback for patterns like "Action:" / "Action Input:" when XML tags are missing
+    action_pattern = r'Action:\s*(\w+)\s*[\r\n]+\s*Action Input:\s*(\{.*?\})'
+    action_matches = re.findall(action_pattern, response_text, re.DOTALL)
+    for name, args_json in action_matches:
+        try:
+            tool_calls.append({
+                "name": name.strip(),
+                "arguments": json.loads(args_json.strip()),
+            })
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse action JSON: {args_json} - Error: {e}")
+            continue
+
     return tool_calls
 
 @cl.on_chat_start
