@@ -48,10 +48,17 @@ class DummyStep:
 class DummyAsyncClient:
     """Mock of ollama.AsyncClient streaming preset responses per call."""
 
+ codex/extend-parse_hermes_tool_calls-and-add-tests
     responses = []  # List of token lists to stream per chat call
 
     def chat(self, model, messages, stream, options):
         tokens = list(self.responses.pop(0)) if self.responses else []
+
+    responses = []
+
+    def chat(self, model, messages, stream, options):
+        tokens = list(self.responses.pop(0) if self.responses else [])
+ master
 
         class Response:
             def __init__(self, toks):
@@ -86,12 +93,18 @@ def test_direct_answer_exits_in_one_iteration(monkeypatch):
     assert len(reasoning_cycles) == 1
 
 
+ codex/extend-parse_hermes_tool_calls-and-add-tests
 def test_malformed_tool_call_triggers_retry(monkeypatch):
+
+def test_directory_listing_appended_to_final_answer(monkeypatch):
+    """Ensure directory listings are included in the final response."""
+ master
     monkeypatch.setattr(app, "cl", types.SimpleNamespace(Step=DummyStep))
     monkeypatch.setattr(app.ollama, "AsyncClient", DummyAsyncClient)
 
     DummyStep.calls = []
     DummyAsyncClient.responses = [
+ codex/extend-parse_hermes_tool_calls-and-add-tests
         ["Thought: need to read file\nAction: read_file\nAction Input: test.txt"],
         ["Final Answer: done"],
     ]
@@ -114,4 +127,21 @@ def test_parse_rejects_action_without_tags():
     bad_response = "Thought: test\nAction: read_file\nAction Input: path"
     with pytest.raises(ValueError):
         app.parse_hermes_tool_calls(bad_response)
+
+        [
+            "<tool_call>{\"name\": \"list_directory\", \"arguments\": {\"path\": \".\"}}</tool_call>"
+        ],
+        ["Final Answer: done"],
+    ]
+
+    async def fake_execute(tool_name, tool_args):
+        return "file1\nfile2"
+
+    monkeypatch.setattr(app, "execute_tool_call", fake_execute)
+
+    agent = ReActAgent()
+    result = asyncio.run(agent._execute_react_loop("List directory", []))
+
+    assert "file1\nfile2" in result
+ master
 
