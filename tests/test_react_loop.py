@@ -85,3 +85,23 @@ def test_direct_answer_exits_in_one_iteration(monkeypatch):
     reasoning_cycles = [n for n in DummyStep.calls if n and n.startswith("Reasoning Cycle")]
     assert len(reasoning_cycles) == 1
 
+
+def test_repeated_question_resolves_in_single_iteration(monkeypatch):
+    """Ensure repeated questions like tool listing don't trigger extra cycles."""
+
+    monkeypatch.setattr(app, "cl", types.SimpleNamespace(Step=DummyStep))
+    monkeypatch.setattr(app.ollama, "AsyncClient", DummyAsyncClient)
+
+    DummyStep.calls = []
+    DummyAsyncClient.tokens = [
+        "Available tools: read_file, write_file, list_directory, execute_command, system_info."
+    ]
+
+    agent = ReActAgent()
+    query = "What tools do you have? What tools do you have?"
+    result = asyncio.run(agent._execute_react_loop(query, []))
+
+    assert "Available tools" in result
+    reasoning_cycles = [n for n in DummyStep.calls if n and n.startswith("Reasoning Cycle")]
+    assert len(reasoning_cycles) == 1
+

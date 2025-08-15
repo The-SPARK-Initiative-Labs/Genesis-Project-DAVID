@@ -146,6 +146,8 @@ class ReActAgent:
     def __init__(self):
         self.max_iterations = 5
         self.conversation_history = []
+        # Maintain running reasoning summary across iterations
+        self.reasoning_state = ""
         
     async def process_with_react(self, query: str, messages: List[Dict]) -> str:
         """Process query using ReAct framework - let qwen3-14b do the reasoning"""
@@ -216,6 +218,19 @@ Begin reasoning."""
             last_tool_result = ""
 
             for iteration in range(self.max_iterations):
+                # Prepend running summary to the conversation for context
+                if self.reasoning_state:
+                    summary_msg = {
+                        "role": "system",
+                        "content": f"Running Summary:\n{self.reasoning_state.strip()}",
+                    }
+                    if self.conversation_history and self.conversation_history[0].get("content", "").startswith(
+                        "Running Summary:"
+                    ):
+                        self.conversation_history[0] = summary_msg
+                    else:
+                        self.conversation_history.insert(0, summary_msg)
+
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
                     
                     # Get LLM response
@@ -242,6 +257,21 @@ Begin reasoning."""
                         # Append last tool result if not already included
                         if last_tool_result and last_tool_result not in final_answer:
                             final_answer = f"{final_answer}\n\n{last_tool_result}"
+                        # Update reasoning summary with final answer
+                        self.reasoning_state += f"{llm_response.strip()}\n"
+                        # Ensure latest summary is available in history
+                        if self.reasoning_state:
+                            summary_msg = {
+                                "role": "system",
+                                "content": f"Running Summary:\n{self.reasoning_state.strip()}",
+                            }
+                            if self.conversation_history and self.conversation_history[0].get("content", "").startswith(
+                                "Running Summary:"
+                            ):
+                                self.conversation_history[0] = summary_msg
+                            else:
+                                self.conversation_history.insert(0, summary_msg)
+
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
@@ -266,12 +296,28 @@ Begin reasoning."""
                                         "content": f"Observation: {result}\n\nContinue reasoning:",
                                     }
                                 )
+                                # Update running summary with thought and observation
+                                self.reasoning_state += f"{llm_response.strip()}\nObservation: {result}\n"
                                 break
                     else:
                         # No tool call present - treat the response as the final answer
                         final_answer = re.sub(r'^Thought:\\s*', '', llm_response, flags=re.I).strip()
                         if last_tool_result and last_tool_result not in final_answer:
                             final_answer = f"{final_answer}\n\n{last_tool_result}"
+                        # Update reasoning summary with final answer
+                        self.reasoning_state += f"{llm_response.strip()}\n"
+                        if self.reasoning_state:
+                            summary_msg = {
+                                "role": "system",
+                                "content": f"Running Summary:\n{self.reasoning_state.strip()}",
+                            }
+                            if self.conversation_history and self.conversation_history[0].get("content", "").startswith(
+                                "Running Summary:"
+                            ):
+                                self.conversation_history[0] = summary_msg
+                            else:
+                                self.conversation_history.insert(0, summary_msg)
+
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
