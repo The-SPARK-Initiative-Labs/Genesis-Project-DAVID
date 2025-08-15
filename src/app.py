@@ -210,8 +210,8 @@ Final Answer must be self-contained and include all requested information withou
 Begin reasoning."""
             )
             
-            # Start conversation with ReAct prompt
-            self.conversation_history = messages + [{"role": "user", "content": react_prompt}]
+            # Start conversation with ReAct prompt as internal guidance
+            self.conversation_history = messages + [{"role": "system", "content": react_prompt}]
             # Keep track of most recent tool output
             last_tool_result = ""
 

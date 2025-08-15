@@ -199,8 +199,8 @@ Final Answer must be self-contained and include all requested information withou
 
 Begin:"""
             
-            # Start conversation with ReAct prompt
-            self.conversation_history = messages + [{"role": "user", "content": react_prompt}]
+            # Start conversation with ReAct prompt as internal guidance
+            self.conversation_history = messages + [{"role": "system", "content": react_prompt}]
             
             for iteration in range(self.max_iterations):
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
