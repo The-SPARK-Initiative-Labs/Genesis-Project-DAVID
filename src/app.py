@@ -212,8 +212,8 @@ Begin reasoning."""
             
             # Start conversation with ReAct prompt as internal guidance
             self.conversation_history = messages + [{"role": "system", "content": react_prompt}]
-            # Keep track of most recent tool output
-            last_tool_result = ""
+            # Track the most recent tool observation for potential inclusion in the final answer
+            last_observation = ""
 
             for iteration in range(self.max_iterations):
                 async with cl.Step(name=f"Reasoning Cycle {iteration + 1}", type="run") as iter_step:
@@ -239,9 +239,9 @@ Begin reasoning."""
                     # Check for Final Answer
                     if "Final Answer:" in llm_response:
                         final_answer = llm_response.split("Final Answer:")[-1].strip()
-                        # Append last tool result if not already included
-                        if last_tool_result and last_tool_result not in final_answer:
-                            final_answer = f"{final_answer}\n\n{last_tool_result}"
+                        # Append last tool observation if not already included
+                        if last_observation and last_observation not in final_answer:
+                            final_answer = f"{final_answer}\n\n{last_observation}"
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
@@ -254,8 +254,8 @@ Begin reasoning."""
                                 action_step.input = f"Tool: {tool_call['name']}"
                                 result = await execute_tool_call(tool_call['name'], tool_call['arguments'])
                                 action_step.output = result
-                                # Store most recent tool result
-                                last_tool_result = result
+                                # Store most recent tool observation
+                                last_observation = result
 
                                 # Add observation to conversation
                                 self.conversation_history.append({"role": "assistant", "content": llm_response})
@@ -270,8 +270,8 @@ Begin reasoning."""
                     else:
                         # No tool call present - treat the response as the final answer
                         final_answer = re.sub(r'^Thought:\\s*', '', llm_response, flags=re.I).strip()
-                        if last_tool_result and last_tool_result not in final_answer:
-                            final_answer = f"{final_answer}\n\n{last_tool_result}"
+                        if last_observation and last_observation not in final_answer:
+                            final_answer = f"{final_answer}\n\n{last_observation}"
                         iter_step.output = f"✅ Final answer reached"
                         main_step.output = f"✅ Completed in {iteration + 1} iterations"
                         return final_answer
