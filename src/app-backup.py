@@ -225,7 +225,22 @@ Begin:"""
                         return final_answer
                     
                     # Parse and execute tool calls
-                    tool_calls = parse_hermes_tool_calls(llm_response)
+                    try:
+                        tool_calls = parse_hermes_tool_calls(llm_response)
+                    except ValueError:
+                        self.conversation_history.append({"role": "assistant", "content": llm_response})
+                        self.conversation_history.append(
+                            {
+                                "role": "system",
+                                "content": (
+                                    "Invalid tool call format. Use <tool_call>{\"name\":..., \"arguments\":{...}}</tool_call> "
+                                    "and wait for an Observation."
+                                ),
+                            }
+                        )
+                        iter_step.output = "🔁 Malformed tool call - requesting retry"
+                        continue
+
                     if tool_calls:
                         for tool_call in tool_calls:
                             async with cl.Step(name="🔧 Action", type="tool") as action_step:
@@ -797,11 +812,16 @@ async def execute_tool_call(tool_name: str, tool_args: dict) -> str:
 def parse_hermes_tool_calls(response_text: str) -> List[Dict[str, Any]]:
     """Parse Hermes-style XML tool calls from response"""
     tool_calls = []
-    
+
     # Find all tool_call XML blocks
     pattern = r'<tool_call>\s*(\{.*?\})\s*</tool_call>'
     matches = re.findall(pattern, response_text, re.DOTALL)
-    
+
+    if not matches:
+        if re.search(r"Action(?: Input)?:", response_text):
+            raise ValueError("Malformed tool call: missing <tool_call> tags or invalid format")
+        return tool_calls
+
     for match in matches:
         try:
             tool_call_data = json.loads(match.strip())
@@ -810,9 +830,8 @@ def parse_hermes_tool_calls(response_text: str) -> List[Dict[str, Any]]:
                 "arguments": tool_call_data.get("arguments", {})
             })
         except json.JSONDecodeError as e:
-            print(f"Failed to parse tool call JSON: {match} - Error: {e}")
-            continue
-    
+            raise ValueError(f"Invalid JSON in tool call: {e}")
+
     return tool_calls
 
 @cl.on_chat_start

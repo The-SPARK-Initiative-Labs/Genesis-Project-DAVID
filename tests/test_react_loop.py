@@ -46,12 +46,12 @@ class DummyStep:
 
 
 class DummyAsyncClient:
-    """Mock of ollama.AsyncClient streaming a preset response."""
+    """Mock of ollama.AsyncClient streaming preset responses per call."""
 
-    tokens = []
+    responses = []  # List of token lists to stream per chat call
 
     def chat(self, model, messages, stream, options):
-        tokens = list(self.tokens)
+        tokens = list(self.responses.pop(0)) if self.responses else []
 
         class Response:
             def __init__(self, toks):
@@ -76,7 +76,7 @@ def test_direct_answer_exits_in_one_iteration(monkeypatch):
     monkeypatch.setattr(app.ollama, "AsyncClient", DummyAsyncClient)
 
     DummyStep.calls = []
-    DummyAsyncClient.tokens = ["Paris is the capital of France."]
+    DummyAsyncClient.responses = [["Paris is the capital of France."]]
 
     agent = ReActAgent()
     result = asyncio.run(agent._execute_react_loop("What is the capital of France?", []))
@@ -84,4 +84,34 @@ def test_direct_answer_exits_in_one_iteration(monkeypatch):
     assert result == "Paris is the capital of France."
     reasoning_cycles = [n for n in DummyStep.calls if n and n.startswith("Reasoning Cycle")]
     assert len(reasoning_cycles) == 1
+
+
+def test_malformed_tool_call_triggers_retry(monkeypatch):
+    monkeypatch.setattr(app, "cl", types.SimpleNamespace(Step=DummyStep))
+    monkeypatch.setattr(app.ollama, "AsyncClient", DummyAsyncClient)
+
+    DummyStep.calls = []
+    DummyAsyncClient.responses = [
+        ["Thought: need to read file\nAction: read_file\nAction Input: test.txt"],
+        ["Final Answer: done"],
+    ]
+
+    agent = ReActAgent()
+    result = asyncio.run(agent._execute_react_loop("Read file", []))
+
+    assert result == "done"
+    reasoning_cycles = [n for n in DummyStep.calls if n and n.startswith("Reasoning Cycle")]
+    assert len(reasoning_cycles) == 2
+    retry_messages = [
+        m["content"]
+        for m in agent.conversation_history
+        if m["role"] == "system" and "Invalid tool call format" in m["content"]
+    ]
+    assert retry_messages, "Expected retry message for malformed tool call"
+
+
+def test_parse_rejects_action_without_tags():
+    bad_response = "Thought: test\nAction: read_file\nAction Input: path"
+    with pytest.raises(ValueError):
+        app.parse_hermes_tool_calls(bad_response)
 
