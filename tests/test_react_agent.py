@@ -1,5 +1,6 @@
 import sys
 import types
+import asyncio
 from pathlib import Path
 
 # Add src directory to path
@@ -64,3 +65,26 @@ def test_complex_query_triggers_react():
     agent = ReActAgent()
     query = "Can you analyze and compare the sizes of files in the directory?"
     assert agent._needs_react_reasoning(query) is True
+
+
+def test_random_number_query_bypasses_react_loop(monkeypatch):
+    agent = ReActAgent()
+
+    called = {"simple": False, "react": False}
+
+    async def fake_execute(query, messages):
+        called["react"] = True
+        return "react"
+
+    async def fake_simple(query, messages):
+        called["simple"] = True
+        return "simple"
+
+    monkeypatch.setattr(agent, "_execute_react_loop", fake_execute)
+    monkeypatch.setattr(agent, "_simple_response", fake_simple)
+
+    result = asyncio.run(agent.process_with_react("Give me a random number", []))
+
+    assert result == "simple"
+    assert called["react"] is False
+    assert called["simple"] is True
