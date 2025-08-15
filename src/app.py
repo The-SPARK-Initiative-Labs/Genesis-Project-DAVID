@@ -945,33 +945,36 @@ async def main(message: cl.Message):
         
         # Handle tool calls if present in response
         tool_calls = parse_hermes_tool_calls(final_response)
-        
+
         if tool_calls:
+            tool_outputs = []
             for tool_call in tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["arguments"]
-                
+
                 # Check permissions with guardian
                 if await guardian.check_permission(tool_name, tool_args):
-                    # Safe tool - execute immediately
+                    # Safe tool - execute immediately and capture real output
                     result = await execute_tool_call(tool_name, tool_args)
-                    final_response += f"\n\nTool Result ({tool_name}):\n{result}"
+                    tool_outputs.append(result)
                 else:
                     # Dangerous tool - permission request sent, stop processing
                     return
-        
-        # Clean up response for final display
-        clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', final_response, flags=re.DOTALL).strip()
-        clean_response = re.sub(r'<think>.*?</think>', '', clean_response, flags=re.DOTALL).strip()
-        
+
+            clean_response = "\n".join(tool_outputs).strip()
+        else:
+            # Clean up response for final display when no tool was called
+            clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', final_response, flags=re.DOTALL).strip()
+            clean_response = re.sub(r'<think>.*?</think>', '', clean_response, flags=re.DOTALL).strip()
+
         if not clean_response:
             clean_response = "I've completed my analysis. Let me know if you need anything else!"
-        
+
         # Send final response
         await cl.Message(content=clean_response).send()
-        
+
         # Add to full history for future reference
-        message_history.append({"role": "assistant", "content": final_response})
+        message_history.append({"role": "assistant", "content": clean_response})
         
     except Exception as e:
         await cl.Message(content=f"Sorry, I encountered an error: {str(e)}").send()
