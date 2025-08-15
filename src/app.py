@@ -265,23 +265,14 @@ Begin reasoning."""
                                 )
                                 break
                     else:
-                        # No tool call present. If the model responded directly (no "Thought:" prefix),
-                        # treat the response as the final answer and exit.
-                        if not llm_response.strip().lower().startswith("thought:"):
-                            final_answer = llm_response.strip()
-                            if last_tool_result and last_tool_result not in final_answer:
-                                final_answer = f"{final_answer}\n\n{last_tool_result}"
-                            iter_step.output = f"✅ Final answer reached"
-                            main_step.output = f"✅ Completed in {iteration + 1} iterations"
-                            return final_answer
+                        # No tool call present - treat the response as the final answer
+                        final_answer = re.sub(r'^Thought:\\s*', '', llm_response, flags=re.I).strip()
+                        if last_tool_result and last_tool_result not in final_answer:
+                            final_answer = f"{final_answer}\n\n{last_tool_result}"
+                        iter_step.output = f"✅ Final answer reached"
+                        main_step.output = f"✅ Completed in {iteration + 1} iterations"
+                        return final_answer
 
-                        # Otherwise, continue reasoning cycle
-                        self.conversation_history.append({"role": "assistant", "content": llm_response})
-                        # Prompt model to continue reasoning using a system message
-                        self.conversation_history.append(
-                            {"role": "system", "content": "Continue with your reasoning:"}
-                        )
-                    
                     iter_step.output = f"Iteration {iteration + 1} completed"
             
             main_step.output = f"⚠️ Reached max iterations"
