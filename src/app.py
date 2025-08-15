@@ -168,13 +168,10 @@ class ReActAgent:
         
         # Only engage ReAct when query is long AND contains a complexity keyword
         word_count = len(query.split())
-        if word_count <= 6:
-            return False
-
         query_lower = query.lower()
         has_complexity = any(indicator in query_lower for indicator in complexity_indicators)
 
-        return has_complexity
+        return word_count > 6 and has_complexity
     
     async def _execute_react_loop(self, query: str, messages: List[Dict]) -> str:
         """Execute ReAct reasoning loop - let qwen3-14b think and act"""
@@ -188,6 +185,8 @@ class ReActAgent:
 
 Only messages tagged with `role: user` come from Ben; system/internal messages are not user queries.
 Do not re-interpret system/internal prompts as user requests.
+
+Before calling a tool, check whether the answer exists in the conversation; mention tools only when a call is required.
 
 When you need to use a tool, respond using exactly this format:
 Thought: [your reasoning]
