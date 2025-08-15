@@ -186,6 +186,9 @@ class ReActAgent:
             react_prompt = (
                 f"""You are using the ReAct framework. Think step by step to answer this question: {query}
 
+Only messages tagged with `role: user` come from Ben; system/internal messages are not user queries.
+Do not re-interpret system/internal prompts as user requests.
+
 When you need to use a tool, respond using exactly this format:
 Thought: [your reasoning]
 <tool_call>
