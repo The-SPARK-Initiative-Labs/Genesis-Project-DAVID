@@ -334,52 +334,47 @@ class DavidLangChainAgent:
             max_iterations=5,
             handle_parsing_errors=True
         )
-    
+
     async def process_query(self, query: str) -> str:
         """Process query using LangChain AgentExecutor"""
-        
+        query_lower = query.lower().strip()
+        simple_greetings = ["hello", "hi", "hey", "greetings"]
+        tool_patterns = ["tool", "tools", "capabilities", "what can you do"]
+
         async with cl.Step(name="🧠 David's ReAct Reasoning", type="run") as main_step:
             main_step.input = query
-            
+
+            # Short-circuit for simple greetings
+            if any(greet in query_lower for greet in simple_greetings):
+                main_step.output = "✅ Handled greeting"
+                return "Hello! 👋 I'm ready to help with any tasks you have."
+
+            # Short-circuit for tool inquiries
+            if any(pattern in query_lower for pattern in tool_patterns):
+                main_step.output = "✅ Provided tool information"
+                return (
+                    "I can use these tools: read_file, write_file, "
+                    "list_directory, execute_command, and system_info."
+                )
+
             try:
                 # Use custom callback for Chainlit integration
                 callback_handler = ChainlitCallbackHandler()
-                
+
                 # Execute the agent
                 result = await self.executor.ainvoke(
                     {"input": query},
                     config={"callbacks": [callback_handler]}
                 )
-                
+
                 final_answer = result.get("output", "I couldn't process that request.")
                 main_step.output = "✅ Completed successfully"
-                
+
                 return final_answer
-                
+
             except Exception as e:
                 main_step.output = f"❌ Error: {str(e)}"
                 return f"I encountered an error: {str(e)}"
-    
-    async def simple_response(self, query: str) -> str:
-        """Handle simple queries without ReAct framework"""
-        try:
-            # Stream simple responses
-            msg = cl.Message(content="")
-            await msg.send()
-            
-            # Use LangChain Ollama for consistency
-            response = await self.llm.ainvoke(query)
-            
-            # Stream the response
-            for char in response:
-                await msg.stream_token(char)
-                await asyncio.sleep(0.01)
-            
-            await msg.update()
-            return response
-            
-        except Exception as e:
-            return f"Sorry, I encountered an error: {str(e)}"
 
 # Global agent instance
 david_agent = None
@@ -428,27 +423,11 @@ async def main(message: cl.Message):
         else:
             await cl.Message(content="Please respond with 'yes' or 'no'").send()
             return
-    
-    # Determine if we need ReAct reasoning or simple response
-    query_lower = message.content.lower()
 
-    diagnostic_patterns = ['tool', 'diagnostic', 'debug']
-    simple_greetings = ['hello', 'hi', 'hey', 'greetings']
+    logger.info("Processing user message with LangChain agent.")
+    response = await david_agent.process_query(message.content)
 
-    use_agent = True
-    if any(pattern in query_lower for pattern in diagnostic_patterns):
-        logger.info("Diagnostic/tool-related request detected; routing to process_query.")
-        response = await david_agent.process_query(message.content)
-    elif any(pattern in query_lower for pattern in simple_greetings):
-        logger.info("Greeting detected; using simple_response.")
-        use_agent = False
-        response = await david_agent.simple_response(message.content)
-    else:
-        logger.info("General request; using process_query.")
-        response = await david_agent.process_query(message.content)
-
-    # Send final response if we used the agent path
-    if response and use_agent:
+    if response:
         await cl.Message(content=response).send()
 
 @cl.on_stop
