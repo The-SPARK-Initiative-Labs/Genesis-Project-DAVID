@@ -34,7 +34,7 @@ This project is designed to run locally.
     * Required Python packages installed: `pip install chainlit ollama`
 
 2.  **Start the Application:**
-    * Run the `start_david.bat` script. This will start the Ollama server and the Chainlit UI.
+    * Run the `start_david.bat` script. This launches the Ollama server and opens the Chainlit UI with the LangChain agent by default; no separate `start_david_langchain.bat` is required.
 
 3.  **Stop the Application:**
     * Close the Chainlit UI and the launcher window.
