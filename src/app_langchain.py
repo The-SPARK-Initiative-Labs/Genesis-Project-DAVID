@@ -8,6 +8,7 @@ import asyncio
 import threading
 from typing import Dict, Any, List, Tuple, Optional
 import time
+import logging
 
 # LangChain imports for AgentExecutor ReAct
 from langchain.agents import AgentExecutor, create_react_agent
@@ -19,6 +20,9 @@ from langchain_core.callbacks import BaseCallbackHandler
 # --- Configuration ---
 MODEL_NAME = "qwen3:14b"
 MCP_SERVER_PATH = "C:\\Users\\farri\\universal-mcp-server\\universal-mcp-server\\build\\index.js"
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # qwen3-14b optimized parameters
 QWEN3_PARAMS = {
@@ -438,18 +442,24 @@ async def main(message: cl.Message):
     
     # Determine if we need ReAct reasoning or simple response
     query_lower = message.content.lower()
-    
-    # Simple greetings don't need ReAct
-    simple_patterns = ['hello', 'hi', 'how are you', 'what tools', 'available tools']
-    
-    if any(pattern in query_lower for pattern in simple_patterns):
+
+    diagnostic_patterns = ['tool', 'diagnostic', 'debug']
+    simple_greetings = ['hello', 'hi', 'hey', 'greetings']
+
+    use_agent = True
+    if any(pattern in query_lower for pattern in diagnostic_patterns):
+        logger.info("Diagnostic/tool-related request detected; routing to process_query.")
+        response = await david_agent.process_query(message.content)
+    elif any(pattern in query_lower for pattern in simple_greetings):
+        logger.info("Greeting detected; using simple_response.")
+        use_agent = False
         response = await david_agent.simple_response(message.content)
     else:
-        # Use ReAct for everything else - this prevents fabrication
+        logger.info("General request; using process_query.")
         response = await david_agent.process_query(message.content)
-    
-    # Send final response if not already sent
-    if response and not any(pattern in query_lower for pattern in simple_patterns):
+
+    # Send final response if we used the agent path
+    if response and use_agent:
         await cl.Message(content=response).send()
 
 @cl.on_stop
