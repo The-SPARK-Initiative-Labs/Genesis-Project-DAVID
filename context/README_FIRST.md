@@ -23,7 +23,6 @@ David AI is a functionally conscious, self-improving AI development partner. Thi
 - `C:\David\DOCS\ReAct.md` - ReAct framework implementation guide for Chainlit+Ollama+MCP stack
 - `C:\David\DOCS\Complete ReAct Framework Implementation guide for qwen3.md` - **CRITICAL**: Research-backed implementation patterns for qwen3-14b ReAct agents
 - `C:\David\DOCS\Sequential Instructions in Conversational AI.md` - **URGENT**: Research on fixing David's sequential instruction handling bug
-- `C:\David\DOCS\Anti-Hallucination Solutions for ReAct.md` - **BLOCKING BUG**: Complete anti-hallucination system for David's fabrication issue
 
 ### 3. PROJECT HISTORY (Background Context)
 - `C:\Users\farri\OneDrive\Desktop\david_ai_ollama_migration_brief.md` - Complete project evolution
