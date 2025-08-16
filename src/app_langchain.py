@@ -237,48 +237,37 @@ async def system_info(info_type: str = "all") -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Create sync wrapper functions for LangChain Tools (they expect sync functions)
-def sync_read_file(path: str) -> str:
-    """Sync wrapper for read_file"""
-    try:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(read_file(path))
-    except RuntimeError:
-        # If no event loop, create one
-        return asyncio.run(read_file(path))
-
-def sync_list_directory(path: str) -> str:
-    """Sync wrapper for list_directory"""
-    try:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(list_directory(path))
-    except RuntimeError:
-        return asyncio.run(list_directory(path))
-
-def sync_system_info(info_type: str = "all") -> str:
-    """Sync wrapper for system_info"""
-    try:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(system_info(info_type))
-    except RuntimeError:
-        return asyncio.run(system_info(info_type))
-
-# Create LangChain Tools from MCP functions
+# Create LangChain Tools from MCP functions using async definitions
 langchain_tools = [
-    Tool(
+    Tool.from_function(
+        func=read_file,
+        coroutine=read_file,
         name="read_file",
-        description="Read contents of a file. Input should be a file path string.",
-        func=sync_read_file
+        description="Read contents of a file. Input should be a file path string."
     ),
-    Tool(
-        name="list_directory", 
-        description="List contents of a directory. Input should be a directory path string.",
-        func=sync_list_directory
+    Tool.from_function(
+        func=write_file,
+        coroutine=write_file,
+        name="write_file",
+        description="Write content to a file. Requires permission."
     ),
-    Tool(
+    Tool.from_function(
+        func=list_directory,
+        coroutine=list_directory,
+        name="list_directory",
+        description="List contents of a directory. Input should be a directory path string."
+    ),
+    Tool.from_function(
+        func=execute_command,
+        coroutine=execute_command,
+        name="execute_command",
+        description="Execute a system command. Requires permission."
+    ),
+    Tool.from_function(
+        func=system_info,
+        coroutine=system_info,
         name="system_info",
-        description="Get system information like OS, hardware, disk usage. Input should be info type (all, os, hardware, disk).",
-        func=sync_system_info
+        description="Get system information like OS, hardware, disk usage. Input should be info type (all, os, hardware, disk)."
     )
 ]
 
