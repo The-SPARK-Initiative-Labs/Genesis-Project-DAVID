@@ -1,22 +1,23 @@
 @echo off
 title David AI - Launcher
 
-:: Make sure the script runs from its own directory
+:: This command ensures the script always runs from the correct directory (C:\David)
 cd /d %~dp0
 
+echo Activating Python virtual environment...
+:: CRITICAL FIX: Activate the virtual environment so the 'chainlit' command can be found.
+call .venv\Scripts\activate
+
 echo Starting Ollama service in the background...
-:: Use start /B to run Ollama truly in the background without a new window
-start "Ollama Background Process" /B cmd /c "ollama serve"
+:: Start Ollama in a separate, non-blocking background process.
+start "Ollama Server" /B ollama serve
 
 echo Waiting 5 seconds for Ollama to initialize...
 timeout /t 5 /nobreak >nul
 
 echo Starting Chainlit UI on port 8002...
-:: Set a unique title for the Chainlit window so we can target it for shutdown
-:: CRITICAL FIX: Add --port 8002 to specify the correct port
-start "David Chainlit UI" cmd /c "chainlit run src/app.py -w --port 8002"
+:: Start Chainlit in its own window with a unique title for easy shutdown.
+start "David Chainlit UI" chainlit run app.py -w --port 8002
 
 echo.
-echo David is starting up. You can access the UI at http://localhost:8002
-echo.
-pause
+echo David is starting up.

@@ -76,6 +76,10 @@ name = "David"
 # Description of the assistant. This is used for HTML tags.
 # description = ""
 
+# CRITICAL FIX: This will make the "Thinking Process" dropdown
+# start in an expanded/open state by default.
+default_expand_messages = true
+
 # Chain of Thought (CoT) display mode. Can be "hidden", "tool_call" or "full".
 cot = "full"
 
