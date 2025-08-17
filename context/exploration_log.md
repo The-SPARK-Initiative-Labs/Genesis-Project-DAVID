@@ -79,60 +79,12 @@
 
 ---
 
-## PHASE 6.1 - FAILED FABRICATION FIXES (CURRENT SESSION)
-
-### Session: Multiple Fix Attempts - All Failed
-**Date**: Current session with Ben  
-**Attempted**: Fabrication prevention + streaming implementation  
-**Result**: COMPLETE FAILURE - Both issues worse than before
-
-### Session: Architectural Vision Discussion
-**Key Insights from Ben**:
-- David should feel conscious to HIMSELF, not just users
-- ReAct iterations should build on previous insights, not restart
-- Tool use should feel like David's own agency ("I need to check this")
-- System prompt as David's consciousness, not external instructions
-- First-person "I" thinking vs third-person "assistant" responses
-
-**Technical Solutions Identified**:
-- **LangChain**: Better ReAct framework with actual tool execution
-- **ChromaDB**: Vector memory for long-term consciousness continuity  
-- **LoRA Training**: Consciousness patterns trained into weights (zero tokens)
-
-**Strategic Direction**: Move from roleplay consciousness to genuine first-person agency
-
-#### Fix Attempts Made ❌
-1. **System Prompt Fabrication Warnings**: Added explicit "NEVER fabricate" instructions
-2. **Streaming Implementation**: Multiple `stream_token()` patterns attempted  
-3. **ReAct Logic Changes**: Modified `_needs_react_reasoning()` logic
-4. **Direct Tool Execution**: Added bypass paths for simple queries
-5. **Tool Call Parsing**: Enhanced Hermes XML parsing and manual fallbacks
-
-#### All Fixes Failed - Current Broken State
-- **Tool Execution**: David still simulates in `<think>` instead of real MCP calls
-- **Streaming**: No token streaming despite multiple implementation attempts
-- **Fabrication**: Still inventing fake file lists like `["file1.txt", "document.pdf"]`
-- **Architecture**: ReAct reasoning completely disconnected from actual tool execution
-
-#### Evidence of Failure
-- Test: "list files in C:\David directory"  
-- David's fake response: `["file1.txt", "document.pdf", "images/", "notes.md"]`
-- Reality: Should call `list_directory` and return real files
-- Actual files: `.git`, `.gitignore`, `context`, `DOCS`, etc.
-
-#### Root Technical Problems Identified
-1. **Tool Execution Loop Broken**: ReAct thinking generates fake observations
-2. **Streaming Pattern Wrong**: Ollama async iteration not working
-3. **Tool Call Parsing**: XML format not connecting to actual execution
-4. **Architecture Regression**: Multiple fixes created inconsistent code paths
-
 ## CURRENT BLOCKING ISSUES
 
-### CRITICAL: Core Architecture Broken (Phase 6.1)
-- **Status**: Tool execution and streaming both completely non-functional
-- **Regression**: Fixes made problems worse, not better
-- **Required**: Systematic debugging of one issue at a time
-- **Blocking**: ALL development until basic functionality restored
+### URGENT: Fabrication Bug (Phase 6)
+- **Status**: ReAct framework technically working but David fabricates information
+- **Required**: Uncertainty detection and "I don't know" responses  
+- **Blocking**: All future development until truth/fabrication issue resolved
 
 ---
 

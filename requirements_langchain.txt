@@ -1,0 +1,16 @@
+# LangChain David AI - Requirements (Auto-resolve compatible versions)
+
+# Core LangChain stack - let pip resolve compatible versions
+langchain
+langchain-core
+langchain-community  
+langchain-ollama
+langgraph
+
+# Chainlit UI framework  
+chainlit
+
+# Core dependencies - let pip resolve
+pydantic>=2.7.4
+aiohttp
+psutil
