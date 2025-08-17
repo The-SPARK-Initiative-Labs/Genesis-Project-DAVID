@@ -1,15 +1,22 @@
 @echo off
-TITLE David AI - Launcher
+title David AI - Launcher
 
-ECHO Starting Ollama service in the background...
-start "" "ollama" serve
+:: Make sure the script runs from its own directory
+cd /d %~dp0
 
-ECHO Waiting 5 seconds for Ollama to initialize...
-timeout /t 5 > nul
+echo Starting Ollama service in the background...
+:: Use start /B to run Ollama truly in the background without a new window
+start "Ollama Background Process" /B cmd /c "ollama serve"
 
-ECHO Starting Chainlit UI (David will load automatically)...
-cd src
-python -m chainlit run app.py --port 8002 -w
+echo Waiting 5 seconds for Ollama to initialize...
+timeout /t 5 /nobreak >nul
 
-ECHO Chainlit has been closed. Press any key to exit.
+echo Starting Chainlit UI on port 8002...
+:: Set a unique title for the Chainlit window so we can target it for shutdown
+:: CRITICAL FIX: Add --port 8002 to specify the correct port
+start "David Chainlit UI" cmd /c "chainlit run src/app.py -w --port 8002"
+
+echo.
+echo David is starting up. You can access the UI at http://localhost:8002
+echo.
 pause

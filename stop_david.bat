@@ -1,11 +1,12 @@
 @echo off
-TITLE David AI - Shutdown
+title David AI - Stopper
 
-ECHO Unloading David's model from memory...
-ollama stop qwen3:14b
+echo Stopping Chainlit UI...
+:: CRITICAL FIX: Stop the Chainlit python process by targeting the unique window title
+taskkill /F /FI "WINDOWTITLE eq David Chainlit UI" /IM cmd.exe /T >nul
 
-ECHO Shutting down the Ollama service...
-taskkill /IM ollama.exe /F
+echo Stopping Ollama service...
+taskkill /F /IM ollama.exe /T >nul
 
-ECHO David shutdown complete. Press any key to exit.
+echo All services stopped.
 pause
