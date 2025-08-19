@@ -2,9 +2,14 @@
 setlocal
 
 :: ============================================================================
-:: David AI - Unified Launcher & Stopper (v4 - Diagnostic)
-:: This version will keep the window open after a crash to display errors.
+:: David AI - Unified Launcher & Stopper (v7 - Corrected Working Directory)
+:: This version forces the script to run from its own directory, which is
+:: the definitive fix for all ".env file not found" errors.
 :: ============================================================================
+
+:: THE FIX: This command changes the current directory to the directory
+:: where this batch file is located. This is the most important line.
+cd /d %~dp0
 
 :menu
 cls
@@ -31,6 +36,21 @@ echo.
 echo Activating Python virtual environment...
 call .venv\Scripts\activate
 
+echo.
+echo Loading environment variables from .env file...
+for /f "usebackq delims=" %%a in ("C:\David\.env") do (
+    set "%%a"
+)
+
+if defined OLLAMA_MODEL (
+    echo OLLAMA_MODEL is set to: %OLLAMA_MODEL%
+) else (
+    echo ERROR: OLLAMA_MODEL not found in .env file!
+    pause
+    goto :eof
+)
+echo.
+
 echo Starting Ollama service in the background...
 start "Ollama Server" /B ollama serve
 
@@ -38,8 +58,6 @@ echo Waiting 5 seconds for Ollama to initialize...
 timeout /t 5 /nobreak >nul
 
 echo Starting Chainlit UI on port 8002...
-:: CRITICAL FIX: We run the command directly in this window and add a pause.
-:: This will keep the window open if the python script crashes.
 chainlit run app.py -w --port 8002
 
 echo.

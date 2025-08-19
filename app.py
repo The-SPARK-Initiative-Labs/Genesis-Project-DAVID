@@ -1,11 +1,10 @@
 # C:\David\app.py
-# This is the main UI file for the Chainlit application.
-# Audited to be correct as per the provided research documents.
+# Fixed to properly handle <think> tags vs response
 
 import chainlit as cl
 import uuid
-from src.local_agent.agent import create_agent_executor
 import asyncio
+from src.local_agent.agent import create_agent_executor
 
 # --- Global State for One-Time Model Loading ---
 MODEL_LOAD_LOCK = asyncio.Lock()
@@ -24,13 +23,16 @@ async def on_chat_start():
             loading_msg = cl.Message(content="🔄 Loading David's consciousness... (This happens only once)")
             await loading_msg.send()
             
-            try
+            try:
                 print("First user connected. Creating agent and preloading model into VRAM...")
-                agent_executor = create_agent_executor()
                 
-                # Preload the model by invoking it with a simple message.
-                llm = agent_executor.runnable.middle[0].middle[0] # Access the llm from the chain
-                await llm.ainvoke("Preload")
+                agent_executor, llm_instance = create_agent_executor()
+                
+                # Test with a simple message to preload
+                test_response = await agent_executor.ainvoke(
+                    {"input": "Hi"}, 
+                    config={"configurable": {"session_id": "preload"}}
+                )
 
                 AGENT_EXECUTOR = agent_executor
                 IS_MODEL_LOADED = True
@@ -39,8 +41,11 @@ async def on_chat_start():
                 await loading_msg.remove()
             
             except Exception as e:
+                import traceback
+                print(f"❌ Critical Error: Failed to load model: {str(e)}")
+                traceback.print_exc()
+                
                 error_message = f"❌ Critical Error: Failed to load model: {str(e)}"
-                print(error_message)
                 await loading_msg.remove()
                 await cl.Message(content=error_message).send()
                 return
@@ -53,25 +58,44 @@ async def on_chat_start():
 @cl.on_message
 async def on_message(message: cl.Message):
     """
-    Handles incoming user messages using the definitive astream pattern.
+    Handles incoming user messages - FIXED to separate thinking from response
     """
     session_id = cl.user_session.get("session_id")
-
-    # This is the definitive, correct pattern from the research documents.
-    cb = cl.AsyncLangchainCallbackHandler()
     config = {"configurable": {"session_id": session_id}}
 
-    # Create the message for the final answer.
-    msg = cl.Message(content="", author="David")
-    await msg.send()
+    try:
+        # Collect full response first
+        full_content = ""
+        async for chunk in AGENT_EXECUTOR.astream(
+            {"input": message.content},
+            config=config
+        ):
+            if hasattr(chunk, 'content') and chunk.content:
+                full_content += chunk.content
 
-    # Stream the response.
-    # The callback handler will automatically create the "Thinking Process" step.
-    # The async for loop will stream the clean, parsed answer into our message.
-    async for chunk in AGENT_EXECUTOR.astream(
-        {"input": message.content},
-        config={"callbacks": [cb], **config},
-    ):
-        await msg.stream_token(chunk)
-    
-    await msg.update()
+        # Parse thinking vs response
+        if "<think>" in full_content and "</think>" in full_content:
+            think_start = full_content.find("<think>")
+            think_end = full_content.find("</think>") + len("</think>")
+            thinking_part = full_content[think_start:think_end]
+            response_part = full_content[think_end:].strip()
+            
+            # Show thinking first
+            thinking_msg = cl.Message(content=thinking_part, author="David")
+            await thinking_msg.send()
+            
+            # Then show response
+            if response_part:
+                response_msg = cl.Message(content=response_part, author="David")
+                await response_msg.send()
+        else:
+            # No thinking tags, just send the content
+            msg = cl.Message(content=full_content, author="David")
+            await msg.send()
+        
+    except Exception as e:
+        error_msg = f"Error: {str(e)}"
+        await cl.Message(content=error_msg, author="David").send()
+        print(f"Error in on_message: {e}")
+        import traceback
+        traceback.print_exc()

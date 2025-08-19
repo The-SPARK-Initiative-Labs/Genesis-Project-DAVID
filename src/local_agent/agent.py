@@ -1,33 +1,26 @@
 # C:\David\src\local_agent\agent.py
-# This module is audited to be correct as per the provided research documents.
+# This version is clean and relies on the launcher to set the environment.
 
-from langchain_community.chat_models import ChatOllama
+import os
+from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
 
-# This map stores conversation histories for each user session.
 session_histories = {}
 
 def create_agent_executor():
-    """
-    Creates and returns a stateful conversational agent based on the definitive
-    architecture from the research documents.
-    """
-    # 1. Initialize the LLM with optimal parameters for reasoning tasks.
-    #    As per "Building LangChain Agent with Ollama", these are tuned for Qwen models.
+    model_name = os.getenv("OLLAMA_MODEL", "qwen3:14b")  # Default to qwen3:14b
+
+
     llm = ChatOllama(
-        model="qwen3:14b:q6_k", # Using the user-specified q6_k quantization
+        model=model_name,
         temperature=0.6,
         top_p=0.95,
         top_k=20,
-        num_ctx=8192, # A robust default context window
-        streaming=True
+        num_ctx=8192,
     )
 
-    # 2. Create the Prompt Template.
-    #    This prompt instructs the model to use <think> tags, which the
-    #    Chainlit callback handler is designed to parse.
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -43,13 +36,8 @@ After your thinking, provide your final, user-facing answer."""
         ]
     )
 
-    # 3. Create the Agent Chain.
-    #    Crucially, we DO NOT add a custom parser here. The raw AIMessage
-    #    is passed to the Chainlit handler, which performs the parsing.
     agent_chain = prompt | llm
 
-    # 4. Add Memory.
-    #    This runnable manages the chat history for each session.
     agent_with_memory = RunnableWithMessageHistory(
         agent_chain,
         lambda session_id: session_histories.setdefault(
@@ -59,4 +47,4 @@ After your thinking, provide your final, user-facing answer."""
         history_messages_key="chat_history",
     )
 
-    return agent_with_memory
+    return agent_with_memory, llm

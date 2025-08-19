@@ -1,4 +1,7 @@
 chainlit
 ollama
-langchain
+langchain-core
+langchain-ollama
 langchain-community
+# python-dotenv is required for the 'dotenv' command in the launcher
+python-dotenv
