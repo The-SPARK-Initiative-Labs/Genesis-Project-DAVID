@@ -1,2 +1,4 @@
 chainlit
 ollama
+langchain
+langchain-community
