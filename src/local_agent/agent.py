@@ -70,3 +70,31 @@ After thinking, provide your authentic response as David in natural text (no XML
     )
 
     return agent_with_memory, llm
+
+
+def status_check(llm=None):
+    """
+    Return David's current LLM configuration.
+
+    Args:
+        llm: Optional ChatOllama instance. If provided, values are taken
+            from this instance. Otherwise, defaults used during creation
+            are returned.
+
+    Returns:
+        dict: Mapping with model name, temperature, and context window.
+    """
+    if llm is not None:
+        model = getattr(llm, "model", None)
+        temperature = getattr(llm, "temperature", None)
+        context_window = getattr(llm, "num_ctx", None)
+    else:
+        model = os.getenv("OLLAMA_MODEL", "qwen3:14b")
+        temperature = 0.6
+        context_window = 8192
+
+    return {
+        "model_name": model,
+        "temperature": temperature,
+        "context_window": context_window,
+    }
