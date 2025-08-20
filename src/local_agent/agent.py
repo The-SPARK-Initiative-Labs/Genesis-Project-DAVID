@@ -6,6 +6,8 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.tools import tool
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 
 session_histories = {}
 
@@ -72,7 +74,8 @@ After thinking, provide your authentic response as David in natural text (no XML
     return agent_with_memory, llm
 
 
-def status_check(llm=None):
+@tool
+def get_status() -> dict:
     """
     Return David's current LLM configuration.
 
