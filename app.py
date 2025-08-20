@@ -5,6 +5,7 @@ import chainlit as cl
 import uuid
 import asyncio
 from src.local_agent.agent import create_agent_executor
+from src.conversation_logger import log_conversation_summary
 
 # --- Global State for One-Time Model Loading ---
 MODEL_LOAD_LOCK = asyncio.Lock()
@@ -92,7 +93,8 @@ async def on_message(message: cl.Message):
             # No thinking tags, just send the content
             msg = cl.Message(content=full_content, author="David")
             await msg.send()
-        
+        # After handling the message, log the conversation so far
+        log_conversation_summary(session_id)
     except Exception as e:
         error_msg = f"Error: {str(e)}"
         await cl.Message(content=error_msg, author="David").send()
