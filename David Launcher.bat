@@ -37,6 +37,9 @@ echo Activating Python virtual environment...
 call .venv\Scripts\activate
 
 echo.
+echo Installing/updating dependencies...
+pip install -r requirements.txt
+
 echo Loading environment variables from .env file...
 for /f "usebackq delims=" %%a in ("C:\David\.env") do (
     set "%%a"
@@ -58,7 +61,7 @@ echo Waiting 5 seconds for Ollama to initialize...
 timeout /t 5 /nobreak >nul
 
 echo Starting Chainlit UI on port 8002...
-chainlit run app.py -w --port 8002
+python -m chainlit run app.py -w --port 8002
 
 echo.
 echo Chainlit process has ended.

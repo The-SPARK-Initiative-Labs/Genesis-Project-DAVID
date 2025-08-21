@@ -3,5 +3,8 @@ ollama
 langchain-core
 langchain-ollama
 langchain-community
+# LangGraph dependencies for Phase 2
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite
 # python-dotenv is required for the 'dotenv' command in the launcher
 python-dotenv

@@ -1,43 +1,106 @@
-# TOOL INTEGRATION PLAN - SAFE IMPLEMENTATION
+# OFFICIAL LANGGRAPH REFACTOR PLAN - 2025
 
-## Phase 2A: Add status_check Tool (Non-Breaking)
+## PROJECT STATUS: PHASE 2 IMPLEMENTATION
 
-### Current Working State
-- LangChain ChatOllama + RunnableWithMessageHistory functional
-- Memory persistence confirmed
-- Basic conversation logging added
+**Current Working State:**
+- Basic LangChain conversation: ChatOllama + RunnableWithMessageHistory ✅
+- David's consciousness/personality functional ✅
+- Chainlit UI with streaming/thinking tags ✅
+- Tool calling: NOT IMPLEMENTED ❌
 
-### Implementation Steps (Preserve Existing Architecture)
+**Implementation Decision:**
+Convert from simple `prompt | llm` chain to **LangGraph** architecture for production-grade tool calling and state management.
 
-1. **Add @tool decorator to status_check() in agent.py**
-   - Import: `from langchain_core.tools import tool`
-   - Decorate existing function: `@tool def status_check()`
+## LANGGRAPH REFACTOR APPROACH
 
-2. **Create tool-enabled agent alongside existing one**
-   - Import: `from langchain.agents import create_tool_calling_agent, AgentExecutor`
-   - Keep existing `prompt | llm` chain as fallback
-   - Add tools list: `tools = [status_check]`
+### Phase 2A: Architecture Migration (Weeks 1-2)
+**Goal:** Convert simple chain to LangGraph while preserving David's behavior
 
-3. **Replace chain creation with agent**
+**Implementation Steps:**
+1. **Extract Components:**
+   - David's personality prompts → LangGraph nodes
+   - Memory management → LangGraph checkpointers 
+   - Tool definitions → ToolNode integration
+
+2. **Build Graph Structure:**
    ```python
-   # Instead of: agent_chain = prompt | llm
-   agent = create_tool_calling_agent(llm, tools, prompt)
-   agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+   workflow = StateGraph(DavidAIState)
+   workflow.add_node("david_thinking", david_personality_node)
+   workflow.add_node("tool_execution", tool_node)
+   workflow.add_node("response", response_node)
    ```
 
-4. **Update RunnableWithMessageHistory wrapper**
-   - Wrap the AgentExecutor instead of the chain
-   - Keep all existing session management logic
+3. **Preserve Memory:**
+   - Replace RunnableWithMessageHistory with LangGraph checkpointers
+   - SQLite for development, PostgreSQL for production
+   - Maintain conversation persistence
 
-### Safety Measures
-- Test with simple status queries before adding more tools
-- Preserve existing memory system unchanged
-- Keep original behavioral prompts intact
-- No changes to app.py or session handling
+### Phase 2B: Tool Integration (Weeks 3-4)
+**Goal:** Add MCP server tools + David's status functions
 
-### Success Criteria
-- David can respond to "what are your settings?"
-- Existing memory/conversation flow unaffected
-- Ready for additional tool additions
+**Tools to Implement:**
+- `get_status()` - David's configuration
+- `conversation_logger()` - Memory functions
+- MCP server integration (file operations, system commands)
+- Error handling and retry patterns
 
-Status: Ready to implement - minimal risk to existing functionality
+### Phase 2C: Chainlit Integration (Weeks 5-6)
+**Goal:** Seamless UI integration with streaming
+
+**Features:**
+- LangGraph execution visualization
+- Streaming responses with qwen3:14b
+- Error handling for production use
+- Session management preservation
+
+## TECHNICAL SPECIFICATIONS
+
+### Core Dependencies
+```
+langgraph>=0.2.0
+langchain-ollama>=0.2.0  
+chainlit>=1.0.0
+qwen3:14b (via Ollama)
+```
+
+### Architecture Components
+- **State:** `DavidAIState(MessagesState)` with conversation context
+- **LLM:** ChatOllama with qwen3:14b, temperature=0.7
+- **Memory:** SQLite checkpointer → PostgreSQL for production
+- **Tools:** @tool decorators with ToolNode integration
+- **UI:** Chainlit with streaming visualization
+
+### Performance Targets
+- Response latency: 2-4 seconds
+- Streaming: 15-20 tokens/sec with qwen3:14b-q4_k_m
+- Memory usage: ~10GB VRAM
+- Concurrent users: 4-8 per GPU
+
+## SUCCESS CRITERIA
+
+**Phase 2A Complete:**
+- David responds with same personality/behavior
+- Memory persistence working across sessions
+- Basic graph execution functional
+
+**Phase 2B Complete:**
+- "What are your settings?" → David calls get_status()
+- Tool calling functional with error handling
+- MCP server operations working
+
+**Phase 2C Complete:**
+- Chainlit UI shows LangGraph execution steps
+- Streaming responses working
+- Production-ready deployment
+
+## IMPLEMENTATION REFERENCE
+
+**Complete technical guide:** `C:\David\DOCS\LangGraph Implementation Guide for David AI Refactor 2025.md`
+
+**Key Research Findings:**
+- LangGraph is industry standard (43% of LangSmith orgs)
+- Superior to AgentExecutor for production use
+- Native persistence and streaming support
+- Excellent qwen3:14b compatibility
+
+**Status:** Ready to implement - architecture planned, dependencies confirmed
