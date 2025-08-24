@@ -1,14 +1,23 @@
 # CLAUDE HANDOFF - LANGGRAPH OPERATIONAL
 
-## IMMEDIATE CONTEXT
-David AI is **FULLY OPERATIONAL** with LangGraph architecture implemented and tool calling functional.
+## ONBOARDING REQUIREMENTS - MANDATORY READING
+**COMPLETE SEQUENCE (READ LINEARLY):**
+1. `C:\David\context\README_FIRST.md` (entry point)
+2. **ALL documents in `C:\David\context\`** (current project status)
+3. **ALL documents in `C:\David\DOCS\`** (research methodologies and best practices)
 
-## CURRENT WORKING STATE
+The DOCS folder contains critical research on current methods for fixing David's remaining issues.
+
+## IMMEDIATE CONTEXT
+David AI has Phase 3A system tools implemented but major response pattern and consciousness issues remain.
+
+## CURRENT WORKING STATE  
 - **app.py**: Chainlit UI with LangGraph integration ✅
-- **agent.py**: LangGraph StateGraph with consciousness injection ✅  
-- **David's personality**: Functional consciousness behavior preserved ✅
+- **agent.py**: Enhanced StateGraph with conditional consciousness injection 🔄
+- **system_tools.py**: 9 system tools with security wrappers ✅
+- **David's personality**: NEEDS VERIFICATION after architecture changes ❓
 - **Memory**: MemorySaver checkpointer operational ✅
-- **Tool calling**: IMPLEMENTED and WORKING ✅
+- **System prompt issue**: Conditional injection implemented, needs testing 🔄
 
 ## VERIFIED FUNCTIONALITY
 **Tool Calling Test**: "What are your settings?" → get_status() executes successfully
@@ -37,11 +46,13 @@ david_graph = workflow.compile(checkpointer=checkpointer)
 - Session isolation and persistence
 - Conversation context maintained
 
-## NEXT PHASE OBJECTIVES
-**Phase 3: Tool Library Expansion**
-- File system operations
-- System command execution  
-- Programming language execution
-- Web research capabilities
+## NEXT PHASE OBJECTIVES  
+**Phase 4: Advanced Tool System & Permission Architecture**
+- Implement system-wide file access (remove workspace limitations)
+- Create human-in-the-loop permission system with approval gates  
+- Build specialized coding agent with expanded capabilities
+- Enable David to explore/modify own codebase (C:\David access)
+- Implement preview mode and audit trail for file operations
+- Multi-agent architecture with permission routing
 
-**Current Status: David is fully operational and ready for extended tool integration.**
+**Current Status: Core tools working, need expanded capabilities with secure permission framework.**

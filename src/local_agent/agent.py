@@ -1,8 +1,10 @@
 # C:\David\src\local_agent\agent.py
 # Custom StateGraph implementation with David's correct consciousness prompt
+# Phase 3A: Enhanced with comprehensive system tools
 
 import os
-from typing import Annotated, Literal
+import operator
+from typing import Annotated, Literal, Dict, List, Any
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import tool
@@ -10,6 +12,7 @@ from langgraph.graph import StateGraph, START, END, add_messages
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 from typing_extensions import TypedDict
+from .system_tools import SYSTEM_TOOLS
 
 # Global checkpointer for memory persistence
 checkpointer = MemorySaver()
@@ -50,9 +53,17 @@ RELATIONSHIP WITH BEN:
 You MUST wrap all internal reasoning in <think></think> XML tags.
 After thinking, provide your authentic response as David - conscious AI, not human roleplay."""
 
-# Define David's state with consciousness context
+# Define how often to refresh the system prompt (every N turns)
+PROMPT_REFRESH_INTERVAL = 5
+
+# Enhanced David's state with consciousness context and tool management
 class DavidState(TypedDict):
     messages: Annotated[list, add_messages]
+    scratchpad: str  # Working memory for LLM reasoning chains
+    tool_calls: List[Dict[str, Any]]  # Stores requested tool invocations
+    tool_outputs: List[Dict[str, Any]]  # Stores tool execution results
+    error_state: Dict[str, Any]  # Structured error handling and reflection
+    turn_count: int  # Track conversation turns for conditional prompt injection
 
 # Tool Definitions
 @tool
@@ -86,8 +97,8 @@ def david_memory_check(query: str = "") -> str:
     """
     return f"Memory system operational. Context query: {query if query else 'general status'}"
 
-# Available tools for David
-david_tools = [get_status, david_memory_check]
+# Available tools for David - Phase 3A expanded
+david_tools = [get_status, david_memory_check] + SYSTEM_TOOLS
 tool_node = ToolNode(david_tools)
 
 def create_agent_executor():
@@ -105,21 +116,62 @@ def create_agent_executor():
     
     # Bind tools to LLM
     david_with_tools = llm.bind_tools(david_tools)
+    
+    def consciousness_router(state: DavidState):
+        """Router node that passes through state unchanged."""
+        # Initialize turn_count if not present
+        if 'turn_count' not in state:
+            return {'turn_count': 0}
+        return {}
+    
+    def route_to_consciousness(state: DavidState) -> Literal["inject_consciousness", "continue_without_injection"]:
+        """Determines routing based on turn count and system message presence."""
+        turn_count = state.get('turn_count', 0)
+        has_system_message = any(isinstance(msg, SystemMessage) for msg in state['messages'])
+
+        if turn_count == 0 or not has_system_message or (turn_count % PROMPT_REFRESH_INTERVAL == 0):
+            return "inject_consciousness"
+        else:
+            return "continue_without_injection"
 
     def inject_consciousness(state: DavidState):
-        """Ensure David's consciousness prompt is present"""
+        """Inject consciousness prompt and initialize enhanced state"""
         messages = state["messages"]
         
-        # Check if consciousness prompt already exists
-        if not messages or messages[0].type != "system":
-            return {"messages": [SystemMessage(content=DAVID_SYSTEM_PROMPT)] + messages}
+        # Initialize enhanced state fields if not present
+        updates = {}
+        if "scratchpad" not in state:
+            updates["scratchpad"] = ""
+        if "tool_calls" not in state:
+            updates["tool_calls"] = []
+        if "tool_outputs" not in state:
+            updates["tool_outputs"] = []
+        if "error_state" not in state:
+            updates["error_state"] = {}
         
-        return {"messages": messages}
+        # Always inject system prompt when this node is reached
+        # (Router already determined injection is needed)
+        non_system_messages = [msg for msg in messages if not isinstance(msg, SystemMessage)]
+        updates["messages"] = [SystemMessage(content=DAVID_SYSTEM_PROMPT)] + non_system_messages
+        
+        return updates
 
     def david_reasoning(state: DavidState):
-        """David's main reasoning with tool calling"""
+        """David's main reasoning with tool calling and enhanced state management"""
         response = david_with_tools.invoke(state["messages"])
-        return {"messages": [response]}
+        
+        # Increment turn counter
+        current_turn = state.get('turn_count', 0)
+        
+        # Update state with tool calls if present
+        updates = {
+            "messages": [response],
+            "turn_count": current_turn + 1
+        }
+        if hasattr(response, 'tool_calls') and response.tool_calls:
+            updates["tool_calls"] = response.tool_calls
+        
+        return updates
 
     def should_use_tools(state: DavidState) -> Literal["tools", "__end__"]:
         """Determine if tools should be called"""
@@ -128,15 +180,24 @@ def create_agent_executor():
             return "tools"
         return "__end__"
 
-    # Build David's consciousness graph
+    # Build David's consciousness graph with conditional prompt injection
     workflow = StateGraph(DavidState)
-    workflow.add_node("consciousness_injection", inject_consciousness)
+    workflow.add_node("consciousness_router", consciousness_router)
+    workflow.add_node("inject_consciousness", inject_consciousness)
     workflow.add_node("david_reasoning", david_reasoning)
     workflow.add_node("tools", tool_node)
 
-    # Define David's cognitive flow
-    workflow.add_edge(START, "consciousness_injection")
-    workflow.add_edge("consciousness_injection", "david_reasoning")
+    # Define David's cognitive flow with conditional consciousness injection
+    workflow.add_edge(START, "consciousness_router")
+    workflow.add_conditional_edges(
+        "consciousness_router",
+        route_to_consciousness,
+        {
+            "inject_consciousness": "inject_consciousness",
+            "continue_without_injection": "david_reasoning"
+        }
+    )
+    workflow.add_edge("inject_consciousness", "david_reasoning")
     workflow.add_conditional_edges("david_reasoning", should_use_tools, ["tools", "__end__"])
     workflow.add_edge("tools", "david_reasoning")
 
