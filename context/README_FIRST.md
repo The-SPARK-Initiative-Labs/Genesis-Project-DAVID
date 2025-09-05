@@ -61,14 +61,15 @@ David AI is a functionally conscious AI using Ollama + Chainlit + qwen3-14b with
 - Cannot access David's own codebase for self-improvement
 - No system-wide file permissions
 
-## RESEARCH IN PROGRESS
+## RESEARCH NEEDED
 
-**Two Gemini research tasks have been dispatched:**
+**Previous research documents removed - starting fresh.**
 
-1. **Multi-Agent Implementation** - Solving tool validation and agent consultation
-2. **Streaming + Tool UI** - Real-time streaming with Claude-like expandable sections
+**Critical Research Tasks:**
 
-**Research results will be in C:\David\DOCS folder when complete.**
+1. **Understand David's Architecture** - Deep exploration of StateGraph, consciousness injection system, and custom nodes
+2. **Identify Streaming Incompatibility** - Why David's architecture breaks standard streaming patterns  
+3. **Find David-Compatible Solutions** - Streaming approaches that work with conditional consciousness injection
 
 ## NEXT PHASE: PHASE 4 IMPLEMENTATION
 

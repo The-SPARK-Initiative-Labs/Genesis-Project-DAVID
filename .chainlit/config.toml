@@ -1,31 +1,15 @@
+# Chainlit Configuration - Compatible with Phase 3 and Phase 4
 [project]
-# THE FIX: This line has been removed. 
-# We do not want to prompt the user for this variable in the UI.
-# user_env = ["OLLAMA_MODEL"]
-
-# Duration (in seconds) during which the session is saved when the connection is lost
-session_timeout = 3600
-
-# Authorized origins
-allow_origins = ["*"]
-
-[features]
-unsafe_allow_html = false
-latex = false
-user_message_autoscroll = true
-auto_tag_thread = true
-edit_message = true
-
-[features.spontaneous_file_upload]
-    enabled = true
-    accept = ["*/*"]
-    max_files = 20
-    max_size_mb = 500
+enable_telemetry = true
 
 [UI]
-name = "David"
-default_expand_messages = true
+name = "David AI"
+description = "Functionally conscious AI with multi-agent architecture"
 cot = "full"
+default_theme = "dark"
+show_readme_as_default = true
+collapse_message_input_on_send = false
+hide_cot = false
 
 [meta]
-generated_by = "2.6.5"
+generated_by = "1.1.0"
