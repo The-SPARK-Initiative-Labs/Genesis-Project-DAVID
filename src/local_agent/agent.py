@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, START, END, add_messages
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 from typing_extensions import TypedDict
-from .david_tools import DAVID_TOOLS
+from .david_tools_grouped import DAVID_TOOLS_GROUPED
 
 # Global checkpointer for memory persistence
 checkpointer = MemorySaver()
@@ -44,7 +44,7 @@ def david_memory_check(query: str = "") -> str:
     return f"Memory system operational. Context query: {query if query else 'general status'}"
 
 # Available tools for David  
-david_tools = [get_status, david_memory_check] + DAVID_TOOLS
+david_tools = [get_status, david_memory_check] + DAVID_TOOLS_GROUPED
 tool_node = ToolNode(david_tools)
 
 def create_agent_executor():
@@ -101,6 +101,7 @@ def create_agent_executor():
         
         for tool_call in last_message.tool_calls:
             tool_name = tool_call.get('name', '')
+            action = tool_call.get('args', {}).get('action', '')
             
             # Check if operation involves paths outside C:\David
             if 'args' in tool_call:
@@ -109,19 +110,44 @@ def create_agent_executor():
                         if is_outside_david_dir(value):
                             outside_david_operations.append((tool_call, key, value))
             
-            # High risk operations
-            if tool_name in ['delete_file', 'execute_command', 'execute_command_confirmed', 
-                           'kill_process', 'start_process', 'execute_powershell', 'execute_batch',
-                           'delete_directory', 'registry_write', 'start_service', 'stop_service',
-                           'restart_service', 'set_environment_variable', 'click_coordinates',
-                           'type_text', 'key_combination', 'create_scheduled_task', 
-                           'delete_scheduled_task']:
+            # High risk operations - check grouped tool actions
+            high_risk = False
+            if tool_name == 'file_operations' and action in ['delete']:
+                high_risk = True
+            elif tool_name == 'directory_operations' and action in ['delete']:
+                high_risk = True
+            elif tool_name == 'process_management' and action in ['kill', 'start']:
+                high_risk = True
+            elif tool_name == 'system_commands' and action in ['execute', 'powershell', 'batch']:
+                high_risk = True
+            elif tool_name == 'registry_operations' and action in ['write']:
+                high_risk = True
+            elif tool_name == 'service_management' and action in ['start', 'stop', 'restart']:
+                high_risk = True
+            elif tool_name == 'environment_management' and action in ['set_var']:
+                high_risk = True
+            elif tool_name == 'ui_automation' and action in ['click', 'type', 'key_combination']:
+                high_risk = True
+            elif tool_name == 'task_management' and action in ['create', 'delete']:
+                high_risk = True
+            
+            if high_risk:
                 dangerous_operations.append(tool_call)
-            # Medium risk operations 
-            elif tool_name in ['write_file', 'append_file', 'edit_line', 'find_replace',
-                             'file_permissions', 'copy_file', 'move_file', 'copy_directory',
-                             'move_directory', 'screenshot', 'sqlite_query', 'sqlite_create_table',
-                             'create_zip', 'extract_zip']:
+            
+            # Medium risk operations - check grouped tool actions
+            medium_risk = False
+            if tool_name == 'file_operations' and action in ['write', 'append', 'edit_line', 'find_replace', 'permissions', 'copy', 'move']:
+                medium_risk = True
+            elif tool_name == 'directory_operations' and action in ['copy', 'move']:
+                medium_risk = True
+            elif tool_name == 'ui_automation' and action in ['screenshot']:
+                medium_risk = True
+            elif tool_name == 'database_operations':
+                medium_risk = True
+            elif tool_name == 'compression_operations':
+                medium_risk = True
+                
+            if medium_risk:
                 medium_risk_operations.append(tool_call)
         
         # Auto-approve safe operations within C:\David
@@ -185,33 +211,43 @@ def create_agent_executor():
                 approval_details.append("**HIGH RISK OPERATIONS:**")
                 for tool_call in dangerous_operations:
                     tool_name = tool_call.get('name', 'unknown')
+                    action = tool_call.get('args', {}).get('action', '')
                     if 'args' in tool_call:
                         args_text = []
                         for key, value in tool_call['args'].items():
+                            if key == 'action':
+                                continue  # Skip action, we'll show it in tool name
                             if isinstance(value, str) and key in ['path', 'source', 'destination', 'command']:
                                 resolved = resolve_path(value) if key != 'command' else value
                                 args_text.append(f"{key}: {resolved}")
                             else:
                                 args_text.append(f"{key}: {value}")
-                        approval_details.append(f"• **{tool_name}** - {', '.join(args_text)}")
+                        display_name = f"{tool_name}({action})" if action else tool_name
+                        approval_details.append(f"• **{display_name}** - {', '.join(args_text)}")
                     else:
-                        approval_details.append(f"• **{tool_name}**")
+                        display_name = f"{tool_name}({action})" if action else tool_name
+                        approval_details.append(f"• **{display_name}**")
             
             if medium_risk_operations:
                 approval_details.append("**MEDIUM RISK OPERATIONS:**")
                 for tool_call in medium_risk_operations:
                     tool_name = tool_call.get('name', 'unknown')
+                    action = tool_call.get('args', {}).get('action', '')
                     if 'args' in tool_call:
                         args_text = []
                         for key, value in tool_call['args'].items():
+                            if key == 'action':
+                                continue  # Skip action, we'll show it in tool name
                             if isinstance(value, str) and key in ['path', 'source', 'destination']:
                                 resolved = resolve_path(value)
                                 args_text.append(f"{key}: {resolved}")
                             else:
                                 args_text.append(f"{key}: {value}")
-                        approval_details.append(f"• **{tool_name}** - {', '.join(args_text)}")
+                        display_name = f"{tool_name}({action})" if action else tool_name
+                        approval_details.append(f"• **{display_name}** - {', '.join(args_text)}")
                     else:
-                        approval_details.append(f"• **{tool_name}**")
+                        display_name = f"{tool_name}({action})" if action else tool_name
+                        approval_details.append(f"• **{display_name}**")
             
             approval_message = "⚠️ **APPROVAL REQUIRED** ⚠️\n\n" + "\n".join(approval_details) + "\n\n**Approve these operations?**"
             

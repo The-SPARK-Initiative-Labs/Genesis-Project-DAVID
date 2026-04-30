@@ -8,3 +8,17 @@ langgraph>=0.2.0
 langgraph-checkpoint-sqlite
 # python-dotenv is required for the 'dotenv' command in the launcher
 python-dotenv
+
+# Additional dependencies for David's tools
+psutil
+pyautogui
+requests
+pyscreeze
+pillow
+mss
+pygetwindow
+pymsgbox
+pytweening
+pynput
+selenium
+webdriver-manager

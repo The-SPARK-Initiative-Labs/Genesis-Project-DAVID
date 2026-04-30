@@ -1,0 +1,30 @@
+# Docker Compose for David + Open WebUI
+version: '3.8'
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3001:8080"
+    environment:
+      - WEBUI_SECRET_KEY=your-secret-key-here
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - PIPELINES_URL=http://pipelines:9099
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - pipelines
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    ports:
+      - "9099:9099"
+    environment:
+      - PIPELINES_DIR=/app/pipelines
+    volumes:
+      - ./src/openwebui_pipeline:/app/pipelines
+      - ./src/openwebui_pipeline/requirements.txt:/app/requirements-custom.txt
+    restart: unless-stopped
+
+volumes:
+  open-webui:
